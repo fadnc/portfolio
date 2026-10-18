@@ -76,10 +76,12 @@ footer{padding-top:var(--gap);padding-bottom:48px}
   .top{padding:16px 20px;align-items:flex-start;gap:12px}
   .brand{font-size:14px;white-space:nowrap}
   .top nav{gap:8px;justify-content:flex-end;flex-wrap:wrap;font-size:12px}
+  h1{font-size:clamp(40px,10vw,48px)}
   .skills{grid-template-columns:1fr;gap:2px 0}
   .skills dd{margin-bottom:14px}
   .rows li{flex-direction:column;gap:12px}
   .rows li>.dates{align-self:flex-start}
 }
+@media (min-width:601px){h1{font-size:clamp(48px,10vw,128px)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 @media (prefers-reduced-motion:reduce){.js [data-reveal]{opacity:1;transform:none}}
