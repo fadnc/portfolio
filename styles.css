@@ -19,8 +19,6 @@ button{font:inherit;color:inherit}
 .page-progress span{display:block;width:100%;height:100%;transform:scaleX(0);transform-origin:left;background:linear-gradient(90deg,var(--accent),#c3cdff);box-shadow:0 0 12px #8fa8ff80}
 .top{position:fixed;z-index:15;inset:0 0 auto;height:76px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(22px,5vw,80px);border-bottom:1px solid transparent;transition:background .3s,border-color .3s,height .3s}
 .top.is-scrolled{height:66px;background:#050507d9;border-color:#ffffff0c;backdrop-filter:blur(16px)}
-.brand-group{display:flex;align-items:center;gap:11px}
-.brand{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;letter-spacing:-.015em}
 .brand-github{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--line);border-radius:50%;color:var(--muted);transition:color .2s,border-color .2s,background .2s}
 .brand-github:hover{color:var(--accent);border-color:var(--accent);background:var(--surface)}
 .brand-github svg{width:17px;height:17px;fill:currentColor}
@@ -276,7 +274,7 @@ h2 em{color:var(--accent);font-style:normal;font-weight:600}
   main,.footer{padding-right:20px;padding-left:20px}
   .top{height:62px;padding-right:20px;padding-left:20px}
   .top.is-scrolled{height:58px}
-  .brand-group{gap:6px}.brand{gap:7px;font-size:11px}.brand-github{width:31px;height:31px}
+  .brand-github{width:31px;height:31px}
   .top nav{gap:12px;font-size:10px}.top nav a:nth-child(1),.top nav a:nth-child(3){display:none}
   .nav-contact{padding:7px 10px}
   .hero{min-height:820px;height:auto;max-height:none;grid-template-columns:1fr;padding-top:86px;align-content:start}
@@ -337,7 +335,7 @@ h2 em{color:var(--accent);font-style:normal;font-weight:600}
 }
 @media(max-width:370px){
   main,.footer{padding-right:16px;padding-left:16px}.top{padding-right:16px;padding-left:16px}
-  .brand-name{font-size:10px}.top nav{gap:8px}.nav-contact{padding:6px 8px}
+  .top nav{gap:8px}.nav-contact{padding:6px 8px}
   h1{font-size:58px}.hero-art{height:320px;min-height:320px}.hero-actions{gap:7px}.button{gap:8px;padding:10px}
   .signal-row{font-size:6px}
 }
