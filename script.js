@@ -6,6 +6,7 @@ if (year) year.textContent = new Date().getFullYear();
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const header = document.querySelector('.top');
 const progress = document.querySelector('.page-progress span');
+const pageField = document.querySelector('.page-field');
 const scrollDriftItems = [...document.querySelectorAll('.project-visual, .contact-art, .language-orbit')];
 let scrollFrame = 0;
 let pageScrollPhase = 0;
@@ -16,6 +17,11 @@ const updateScrollChrome = () => {
     pageScrollPhase = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
     if (progress) progress.style.transform = `scaleX(${pageScrollPhase})`;
     if (header) header.classList.toggle('is-scrolled', window.scrollY > 28);
+    if (pageField && !reduceMotion.matches) {
+      const settle = Math.min(1, pageScrollPhase / 0.14);
+      const easedSettle = settle * settle * (3 - 2 * settle);
+      pageField.style.opacity = String(0.25 - easedSettle * 0.185);
+    }
     if (!reduceMotion.matches) {
       const viewportMid = window.innerHeight * 0.5;
       scrollDriftItems.forEach(item => {
@@ -134,9 +140,12 @@ if (canvas && canvas.getContext) {
       const baseRotation = scene.rotation;
       const turnY = baseRotation + pointerX * 0.42 + Math.sin(t) * 0.08;
       const turnX = 0.13 + pointerY * 0.24;
+      const settle = Math.min(1, phase / 0.14);
+      const easedSettle = settle * settle * (3 - 2 * settle);
+      const mobileLayout = width <= 640;
       const scale = Math.min(width * 0.26, height * 0.49, 200);
-      const centerX = width * 0.51 + pointerX * 18;
-      const centerY = height * 0.5 + pointerY * 11;
+      const centerX = width * (0.74 - easedSettle * 0.23) + pointerX * 18;
+      const centerY = height * (mobileLayout ? 0.72 - easedSettle * 0.22 : 0.5) + pointerY * 11;
       const wash = ctx.createRadialGradient(centerX, centerY, 2, centerX, centerY, scale * 2.8);
       wash.addColorStop(0, 'rgba(178,181,194,0.075)');
       wash.addColorStop(0.47, 'rgba(107,111,126,0.032)');

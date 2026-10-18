@@ -2,7 +2,7 @@
   --bg:#050507; --surface:#0d0d12; --line:#1c1c24;
   --text:#ececf1; --muted:#8b8b98; --accent:#8fa8ff;
   --font:"Geist",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --col:100%; --gap:clamp(88px,9vw,138px);
+  --col:min(100%,1720px); --gap:clamp(88px,9vw,138px);
 }
 *{box-sizing:border-box;margin:0}
 html{scroll-behavior:smooth;scroll-padding-top:90px;background:var(--bg);overflow-x:clip}
@@ -18,7 +18,7 @@ button{font:inherit;color:inherit}
 .skip:focus{left:8px}
 .page-progress{position:fixed;top:0;left:0;right:0;height:2px;z-index:20;pointer-events:none}
 .page-progress span{display:block;width:100%;height:100%;transform:scaleX(0);transform-origin:left;background:linear-gradient(90deg,var(--accent),#c3cdff);box-shadow:0 0 12px #8fa8ff80}
-.top{position:fixed;z-index:15;inset:0 0 auto;height:76px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(18px,2.2vw,42px);border-bottom:1px solid transparent;transition:background .3s,border-color .3s,height .3s}
+.top{position:fixed;z-index:15;inset:0 0 auto;height:76px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(22px,4vw,72px);border-bottom:1px solid transparent;transition:background .3s,border-color .3s,height .3s}
 .top.is-scrolled{height:66px;background:#050507d9;border-color:#ffffff0c;backdrop-filter:blur(16px)}
 .brand-github{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--line);border-radius:50%;color:var(--muted);transition:color .2s,border-color .2s,background .2s}
 .brand-github:hover{color:var(--accent);border-color:var(--accent);background:var(--surface)}
@@ -28,7 +28,7 @@ button{font:inherit;color:inherit}
 .top nav a:hover,.top nav a[aria-current="location"]{color:var(--text)}
 .nav-contact{padding:9px 14px;border:1px solid #ffffff25;border-radius:99px;color:var(--text)!important;transition:border-color .2s,background .2s!important}
 .nav-contact:hover{border-color:#8fa8ff75;background:#8fa8ff13}
-main,.footer{width:100%;max-width:var(--col);margin:0 auto;padding:0 clamp(18px,2.2vw,42px)}
+main,.footer{width:100%;max-width:var(--col);margin:0 auto;padding:0 clamp(22px,4vw,72px)}
 main,.footer{position:relative;z-index:1}
 .page-field{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;opacity:.065;-webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 12%,#000 88%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0%,#000 12%,#000 88%,transparent 100%)}
 #helix{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y}
