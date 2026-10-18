@@ -74,7 +74,6 @@ if ('IntersectionObserver' in window) {
 
 // Low-cost 3D projection: a glass-bar helix responds to pointer position and page scroll.
 const canvas = document.getElementById('helix');
-const hint = document.getElementById('scene-hint');
 const soundButton = document.getElementById('sound-toggle');
 if (canvas && canvas.getContext) {
   const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
@@ -198,9 +197,6 @@ if (canvas && canvas.getContext) {
       let closest = null;
       if (pointer.active) closest = objects.reduce((best, item) => item.distance < best.distance ? item : best, objects[0]);
       scene.selected = closest && closest.distance < 38 ? closest.bar.index : -1;
-      if (scene.selected >= 0 && hint) hint.textContent = soundEnabled ? 'TAP A BAR TO PLAY A NOTE' : 'GLASS FIELD / INTERACTIVE';
-      else if (hint) hint.textContent = 'MOVE THROUGH THE FIELD';
-
       objects.forEach(item => {
         const active = item.bar.index === scene.selected;
         if (active) {
@@ -311,7 +307,7 @@ if (canvas && canvas.getContext) {
     if (soundButton) soundButton.addEventListener('click', async () => {
       soundEnabled = !soundEnabled;
       soundButton.setAttribute('aria-pressed', String(soundEnabled));
-      soundButton.textContent = soundEnabled ? 'Sound on · tap a bar' : 'Sound off';
+      soundButton.textContent = soundEnabled ? 'Sound on' : 'Sound off';
       if (soundEnabled) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (AudioContext) {
