@@ -79,7 +79,7 @@ if (canvas && canvas.getContext) {
   const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
   if (ctx) {
     const art = canvas.closest('.hero-art');
-    const pointer = { x: 0, y: 0, active: false };
+    const pointer = { x: 0.5, y: 0.5, targetX: 0.5, targetY: 0.5, active: false };
     const scene = { width: 0, height: 0, phase: 0, rotation: 0, running: false, frame: 0, selected: -1 };
     const wake = [];
     const bars = Array.from({ length: 32 }, (_, i) => ({ index: i, angle: i * 0.67, y: (i - 15.5) * 0.115 }));
@@ -129,8 +129,8 @@ if (canvas && canvas.getContext) {
       const centerX = width * 0.51 + pointerX * 18;
       const centerY = height * 0.5 + pointerY * 11;
       const wash = ctx.createRadialGradient(centerX, centerY, 2, centerX, centerY, scale * 2.8);
-      wash.addColorStop(0, 'rgba(123,145,255,0.105)');
-      wash.addColorStop(0.47, 'rgba(82,99,195,0.035)');
+      wash.addColorStop(0, 'rgba(178,181,194,0.075)');
+      wash.addColorStop(0.47, 'rgba(107,111,126,0.032)');
       wash.addColorStop(1, 'rgba(5,5,7,0)');
       ctx.fillStyle = wash;
       ctx.fillRect(0, 0, width, height);
@@ -140,7 +140,7 @@ if (canvas && canvas.getContext) {
         const dx = (point.x - 0.5) * width;
         const dy = (point.y - 0.5) * height;
         ctx.beginPath();
-        ctx.fillStyle = `rgba(190,201,255,${0.09 * pulse})`;
+        ctx.fillStyle = `rgba(196,199,208,${0.11 * pulse})`;
         ctx.arc(width * 0.51 + dx, height * 0.5 + dy, point.size * pulse, 0, Math.PI * 2);
         ctx.fill();
       });
@@ -254,7 +254,10 @@ if (canvas && canvas.getContext) {
 
     const animate = now => {
       if (!scene.running) return;
-      scene.phase = Math.min(1, Math.max(0, Number(hero?.style.getPropertyValue('--scroll-phase')) || 0));
+      const targetPhase = Math.min(1, Math.max(0, Number(hero?.style.getPropertyValue('--scroll-phase')) || 0));
+      scene.phase += (targetPhase - scene.phase) * 0.085;
+      pointer.x += (pointer.targetX - pointer.x) * 0.12;
+      pointer.y += (pointer.targetY - pointer.y) * 0.12;
       paint(now);
       if (!reduceMotion.matches) scene.frame = requestAnimationFrame(animate);
     };
@@ -275,15 +278,15 @@ if (canvas && canvas.getContext) {
 
     const onPointer = event => {
       const box = canvas.getBoundingClientRect();
-      pointer.x = (event.clientX - box.left) / box.width;
-      pointer.y = (event.clientY - box.top) / box.height;
+      pointer.targetX = (event.clientX - box.left) / box.width;
+      pointer.targetY = (event.clientY - box.top) / box.height;
       pointer.active = true;
       wake.push({ x: pointer.x, y: pointer.y, time: performance.now() });
       if (wake.length > 22) wake.shift();
       if (!scene.running) paint(performance.now());
     };
     canvas.addEventListener('pointermove', onPointer, { passive: true });
-    canvas.addEventListener('pointerleave', () => { pointer.active = false; if (!scene.running) paint(performance.now()); }, { passive: true });
+    canvas.addEventListener('pointerleave', () => { pointer.active = false; pointer.targetX = 0.5; pointer.targetY = 0.5; if (!scene.running) paint(performance.now()); }, { passive: true });
 
     const playNote = index => {
       if (!soundEnabled || !audio || performance.now() - lastStrike < 95) return;
