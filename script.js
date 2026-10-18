@@ -7,29 +7,55 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const header = document.querySelector('.top');
 const progress = document.querySelector('.page-progress span');
 const pageField = document.querySelector('.page-field');
+const sections = [...document.querySelectorAll('main > section')];
+const navLinks = [...document.querySelectorAll('.top nav a[href^="#"]')];
 const scrollDriftItems = [...document.querySelectorAll('.project-visual, .contact-art, .language-orbit')];
-let scrollFrame = 0;
 let pageScrollPhase = 0;
+let activeSceneIndex = 0;
+let scrollFrame = 0;
+let requestScenePaint = () => {};
+
+const sectionAtViewportCenter = () => {
+  const mid = window.innerHeight * 0.52;
+  let nearest = 0;
+  let distance = Infinity;
+  sections.forEach((section, index) => {
+    const box = section.getBoundingClientRect();
+    if (box.top <= mid && box.bottom >= mid) nearest = index;
+    const center = box.top + box.height / 2;
+    if (Math.abs(center - mid) < distance) {
+      distance = Math.abs(center - mid);
+      if (box.top > mid) nearest = index;
+    }
+  });
+  return nearest;
+};
+
 const updateScrollChrome = () => {
   if (scrollFrame) return;
   scrollFrame = requestAnimationFrame(() => {
     const max = document.documentElement.scrollHeight - window.innerHeight;
     pageScrollPhase = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
-    if (progress) progress.style.transform = `scaleX(${pageScrollPhase})`;
+    activeSceneIndex = sectionAtViewportCenter();
+    if (progress) progress.style.transform = `scaleY(${pageScrollPhase})`;
     if (header) header.classList.toggle('is-scrolled', window.scrollY > 28);
-    if (pageField && !reduceMotion.matches) {
-      const settle = Math.min(1, pageScrollPhase / 0.14);
-      const easedSettle = settle * settle * (3 - 2 * settle);
-      pageField.style.opacity = String(0.25 - easedSettle * 0.185);
+    if (pageField) pageField.style.opacity = reduceMotion.matches ? '.28' : String(0.46 - pageScrollPhase * 0.08);
+    const active = sections[activeSceneIndex];
+    if (active?.id) {
+      navLinks.forEach(link => {
+        if (link.hash === `#${active.id}`) link.setAttribute('aria-current', 'location');
+        else link.removeAttribute('aria-current');
+      });
     }
     if (!reduceMotion.matches) {
       const viewportMid = window.innerHeight * 0.5;
       scrollDriftItems.forEach(item => {
         const box = item.getBoundingClientRect();
-        const offset = (box.top + box.height * 0.5 - viewportMid) * -0.035;
-        item.style.setProperty('--scroll-shift', `${Math.max(-18, Math.min(18, offset)).toFixed(1)}px`);
+        const offset = (box.top + box.height * 0.5 - viewportMid) * -0.025;
+        item.style.setProperty('--scroll-shift', `${Math.max(-14, Math.min(14, offset)).toFixed(1)}px`);
       });
     }
+    requestScenePaint();
     scrollFrame = 0;
   });
 };
@@ -49,7 +75,7 @@ if (reduceMotion.matches || !('IntersectionObserver' in window)) {
     });
   }, { threshold: 0.12, rootMargin: '0px 0px -45px 0px' });
   revealItems.forEach((item, index) => {
-    if (item.classList.contains('project-card')) item.style.setProperty('--reveal-delay', `${(index % 2) * 100}ms`);
+    if (item.classList.contains('project-card')) item.style.setProperty('--reveal-delay', `${(index % 2) * 90}ms`);
     revealObserver.observe(item);
   });
 }
@@ -72,302 +98,214 @@ filterButtons.forEach(button => {
   });
 });
 
-const navLinks = [...document.querySelectorAll('.top nav a[href^="#"]')];
-const navSections = navLinks.map(link => document.querySelector(link.getAttribute('href'))).filter(Boolean);
-if ('IntersectionObserver' in window) {
-  const navObserver = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (!entry.isIntersecting) return;
-      navLinks.forEach(link => {
-        if (link.getAttribute('href') === `#${entry.target.id}`) link.setAttribute('aria-current', 'location');
-        else link.removeAttribute('aria-current');
-      });
-    });
-  }, { rootMargin: '-30% 0px -62% 0px' });
-  navSections.forEach(section => navObserver.observe(section));
+// A small desktop-only reticle replaces the browser cursor without changing touch behavior.
+const cursor = document.querySelector('.custom-cursor');
+if (cursor && window.matchMedia('(pointer: fine)').matches && !reduceMotion.matches) {
+  document.body.classList.add('has-custom-cursor');
+  window.addEventListener('pointermove', event => {
+    cursor.style.transform = `translate3d(${event.clientX}px,${event.clientY}px,0) translate(-50%,-50%)`;
+    cursor.classList.toggle('is-active', Boolean(event.target.closest('a,button')));
+  }, { passive: true });
+  document.addEventListener('pointerleave', () => cursor.classList.remove('is-active'));
 }
 
-// Low-cost 3D projection: a glass-bar helix responds to pointer position and page scroll.
-const canvas = document.getElementById('helix');
-const soundButton = document.getElementById('sound-toggle');
-if (canvas && canvas.getContext) {
-  const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+// Brief, skippable systems check. The page remains usable underneath it.
+const boot = document.getElementById('boot-intro');
+const finishBoot = () => {
+  if (!boot || boot.classList.contains('is-done')) return;
+  boot.classList.add('is-done');
+  window.setTimeout(() => { boot.hidden = true; }, 500);
+};
+if (boot) {
+  const skipBoot = document.getElementById('skip-boot');
+  skipBoot?.addEventListener('click', finishBoot);
+  if (reduceMotion.matches) finishBoot();
+  else window.setTimeout(finishBoot, 900);
+}
+
+// Three parallax star layers and a section-aware observatory scene, rendered in Canvas 2D.
+const canvas = document.getElementById('scene-canvas');
+if (canvas instanceof HTMLCanvasElement) {
+  const ctx = canvas.getContext('2d', { alpha: true });
   if (ctx) {
-    const art = canvas.closest('.page-field');
-    const pointer = { x: 0.5, y: 0.5, targetX: 0.5, targetY: 0.5, active: false };
-    const scene = { width: 0, height: 0, phase: 0, rotation: 0, running: false, frame: 0, selected: -1 };
-    const wake = [];
-    const bars = Array.from({ length: 32 }, (_, i) => ({ index: i, angle: i * 0.67, y: (i - 15.5) * 0.115 }));
-    const dust = Array.from({ length: 92 }, (_, i) => ({
-      x: ((i * 73.17) % 997) / 997,
-      y: ((i * 151.71 + 13) % 991) / 991,
-      size: 0.45 + ((i * 19) % 13) / 10,
-      phase: i * 2.31
+    const colors = { amber: '#FF9F1C', hot: '#FF6B1A', teal: '#00B8C4', ice: '#3DE0E8', white: '#F2EFE8' };
+    const stars = Array.from({ length: window.innerWidth < 640 ? 115 : 235 }, (_, index) => ({
+      x: Math.random(), y: Math.random(), radius: 0.35 + Math.random() * (index % 7 === 0 ? 1.25 : 0.65),
+      layer: index % 3, phase: Math.random() * Math.PI * 2, tint: index % 17 === 0 ? 1 : 0
     }));
-    let audio = null;
-    let soundEnabled = false;
-    let lastStrike = 0;
-    const pentatonic = [261.63, 293.66, 329.63, 392, 440, 523.25, 587.33, 659.25];
+    let width = 1;
+    let height = 1;
+    let dpr = 1;
+    let pointerX = 0;
+    let pointerY = 0;
+    let lastY = window.scrollY;
+    let scrollVelocity = 0;
+    let lastPaint = 0;
+    let frame = 0;
+    let running = false;
+    const reduced = () => reduceMotion.matches;
 
     const resize = () => {
-      const box = canvas.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-      scene.width = Math.max(1, box.width);
-      scene.height = Math.max(1, box.height);
-      canvas.width = Math.round(scene.width * dpr);
-      canvas.height = Math.round(scene.height * dpr);
+      const rect = canvas.getBoundingClientRect();
+      width = Math.max(1, rect.width || window.innerWidth);
+      height = Math.max(1, rect.height || window.innerHeight);
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       paint(performance.now());
     };
 
-    const project = (x, y, z, globalY, globalX, centerX, centerY, scale) => {
-      const gx = x * Math.cos(globalY) + z * Math.sin(globalY);
-      const gz = z * Math.cos(globalY) - x * Math.sin(globalY);
-      const gy = y * Math.cos(globalX) - gz * Math.sin(globalX);
-      const depth = y * Math.sin(globalX) + gz * Math.cos(globalX);
-      const perspective = 6.4 / (6.4 + depth);
-      return { x: centerX + gx * scale * perspective, y: centerY - gy * scale * perspective, z: depth, perspective };
-    };
-
-    const paint = now => {
-      const { width, height } = scene;
-      if (!width || !height) return;
-      ctx.clearRect(0, 0, width, height);
-      const phase = scene.phase;
-      const pointerX = pointer.active ? (pointer.x - 0.5) : 0;
-      const pointerY = pointer.active ? (pointer.y - 0.5) : 0;
-      const t = reduceMotion.matches ? 0 : now * 0.00016;
-      const baseRotation = scene.rotation;
-      const turnY = baseRotation + pointerX * 0.42 + Math.sin(t) * 0.08;
-      const turnX = 0.13 + pointerY * 0.24;
-      const settle = Math.min(1, phase / 0.14);
-      const easedSettle = settle * settle * (3 - 2 * settle);
-      const mobileLayout = width <= 640;
-      const scale = Math.min(width * 0.26, height * 0.49, 200);
-      const centerX = width * (0.74 - easedSettle * 0.23) + pointerX * 18;
-      const centerY = height * (mobileLayout ? 0.72 - easedSettle * 0.22 : 0.5) + pointerY * 11;
-      const wash = ctx.createRadialGradient(centerX, centerY, 2, centerX, centerY, scale * 2.8);
-      wash.addColorStop(0, 'rgba(178,181,194,0.075)');
-      wash.addColorStop(0.47, 'rgba(107,111,126,0.032)');
-      wash.addColorStop(1, 'rgba(5,5,7,0)');
-      ctx.fillStyle = wash;
-      ctx.fillRect(0, 0, width, height);
-
-      dust.forEach(point => {
-        const pulse = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 2 + point.phase));
-        const dx = (point.x - 0.5) * width;
-        const dy = (point.y - 0.5) * height;
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(196,199,208,${0.11 * pulse})`;
-        ctx.arc(width * 0.51 + dx, height * 0.5 + dy, point.size * pulse, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      while (wake.length && now - wake[0].time > 620) wake.shift();
-      if (wake.length > 1) {
-        ctx.save();
-        ctx.globalCompositeOperation = 'screen';
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        for (let index = 1; index < wake.length; index++) {
-          const start = wake[index - 1];
-          const end = wake[index];
-          const age = (now - end.time) / 620;
-          const alpha = Math.max(0, 0.24 * (1 - age));
-          ctx.beginPath();
-          ctx.moveTo(start.x * width, start.y * height);
-          ctx.lineTo(end.x * width, end.y * height);
-          ctx.strokeStyle = `rgba(145,166,255,${alpha})`;
-          ctx.lineWidth = 15 * (1 - age) + 1;
-          ctx.shadowColor = '#859dff';
-          ctx.shadowBlur = 13 * (1 - age);
-          ctx.stroke();
-        }
-        ctx.restore();
+    const planet = (x, y, radius, time, color = colors.amber) => {
+      const glow = ctx.createRadialGradient(x, y, radius * 0.45, x, y, radius * 1.75);
+      glow.addColorStop(0, `${color}30`);
+      glow.addColorStop(1, `${color}00`);
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(x, y, radius * 1.75, 0, Math.PI * 2); ctx.fill();
+      const surface = ctx.createRadialGradient(x - radius * 0.36, y - radius * 0.4, radius * 0.05, x, y, radius);
+      surface.addColorStop(0, '#FFE1A6');
+      surface.addColorStop(0.38, color);
+      surface.addColorStop(1, '#50230F');
+      ctx.fillStyle = surface;
+      ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
+      ctx.save(); ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.clip();
+      ctx.globalAlpha = 0.19;
+      for (let band = 0; band < 5; band++) {
+        ctx.beginPath(); ctx.ellipse(x + Math.sin(time * 0.15 + band) * radius * 0.25, y + (band - 2) * radius * 0.34, radius * 1.3, radius * 0.09, -0.25, 0, Math.PI * 2);
+        ctx.fillStyle = band % 2 ? '#08121A' : '#FFE1A6'; ctx.fill();
       }
-
-      const objects = bars.map(bar => {
-        const angle = bar.angle + phase * 3.8 + t * 0.28;
-        const x = Math.cos(angle) * 1.05;
-        const z = Math.sin(angle) * 0.84;
-        const tangent = angle + Math.PI / 2 + Math.sin(t + bar.index) * 0.025;
-        const vertices = [];
-        for (const lx of [-0.52, 0.52]) for (const ly of [-0.065, 0.065]) for (const lz of [-0.15, 0.15]) {
-          const rx = lx * Math.cos(tangent) + lz * Math.sin(tangent);
-          const rz = lz * Math.cos(tangent) - lx * Math.sin(tangent);
-          vertices.push(project(x + rx, bar.y + ly, z + rz, turnY, turnX, centerX, centerY, scale));
-        }
-        const faces = [
-          { ids: [1, 3, 7, 5], tone: 1.25, edge: 0.4 },
-          { ids: [0, 4, 6, 2], tone: 0.36, edge: 0.14 },
-          { ids: [2, 6, 7, 3], tone: 0.9, edge: 0.34 },
-          { ids: [0, 1, 5, 4], tone: 0.69, edge: 0.26 },
-          { ids: [4, 5, 7, 6], tone: 0.56, edge: 0.22 },
-          { ids: [0, 2, 3, 1], tone: 0.8, edge: 0.3 }
-        ].map(face => ({ ...face, z: face.ids.reduce((sum, id) => sum + vertices[id].z, 0) / 4 }));
-        const center = project(x, bar.y, z, turnY, turnX, centerX, centerY, scale);
-        const dx = pointer.active ? (center.x - pointer.x * width) : 999;
-        const dy = pointer.active ? (center.y - pointer.y * height) : 999;
-        const distance = Math.hypot(dx, dy);
-        return { bar, vertices, faces, center, depth: center.z, distance };
-      }).sort((a, b) => b.depth - a.depth);
-
-      let closest = null;
-      if (pointer.active) closest = objects.reduce((best, item) => item.distance < best.distance ? item : best, objects[0]);
-      scene.selected = closest && closest.distance < 38 ? closest.bar.index : -1;
-      objects.forEach(item => {
-        const active = item.bar.index === scene.selected;
-        if (active) {
-          ctx.save();
-          ctx.shadowColor = 'rgba(168,185,255,0.9)';
-          ctx.shadowBlur = 23;
-          ctx.beginPath();
-          ctx.ellipse(item.center.x, item.center.y, 33 * item.center.perspective, 8 * item.center.perspective, -0.12, 0, Math.PI * 2);
-          ctx.strokeStyle = 'rgba(178,194,255,0.48)';
-          ctx.lineWidth = 1;
-          ctx.stroke();
-          ctx.restore();
-        }
-        item.faces.sort((a, b) => a.z - b.z).forEach(face => {
-          const rgb = active ? '191,204,255' : (item.bar.index % 4 === 0 ? '151,170,255' : '137,151,220');
-          ctx.beginPath();
-          face.ids.forEach((id, index) => {
-            const point = item.vertices[id];
-            if (index === 0) ctx.moveTo(point.x, point.y); else ctx.lineTo(point.x, point.y);
-          });
-          ctx.closePath();
-          ctx.fillStyle = `rgba(${rgb},${Math.min(0.66, face.tone * (active ? 0.47 : 0.33) + 0.035)})`;
-          ctx.fill();
-          ctx.strokeStyle = `rgba(209,218,255,${face.edge * (active ? 1.8 : 1)})`;
-          ctx.lineWidth = active ? 1.1 : 0.7;
-          if (active) { ctx.shadowColor = '#91a9ff'; ctx.shadowBlur = 12; }
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-          const topFace = face.ids.includes(7) && face.ids.includes(5);
-          if (topFace) {
-            const g = ctx.createLinearGradient(item.vertices[1].x, item.vertices[1].y, item.vertices[7].x, item.vertices[7].y);
-            g.addColorStop(0, 'rgba(255,255,255,0.28)');
-            g.addColorStop(0.55, 'rgba(190,204,255,0.04)');
-            g.addColorStop(1, 'rgba(255,255,255,0.16)');
-            ctx.beginPath();
-            ctx.moveTo(item.vertices[1].x, item.vertices[1].y);
-            ctx.lineTo(item.vertices[5].x, item.vertices[5].y);
-            ctx.strokeStyle = g;
-            ctx.lineWidth = 1.3;
-            ctx.stroke();
-          }
-        });
-      });
-
-      ctx.save();
-      ctx.globalAlpha = 0.24;
-      ctx.strokeStyle = '#9aaaff';
-      ctx.setLineDash([2, 8]);
-      ctx.lineWidth = 0.7;
-      ctx.beginPath();
-      ctx.ellipse(centerX, centerY, scale * 1.45, scale * 0.41, -0.16 + turnY * 0.1, 0, Math.PI * 2);
-      ctx.stroke();
       ctx.restore();
     };
 
+    const orbitSystem = (x, y, size, time) => {
+      [0.72, 1.05, 1.42].forEach((factor, index) => {
+        ctx.save(); ctx.translate(x, y); ctx.rotate(-0.34 + index * 0.23);
+        ctx.beginPath(); ctx.ellipse(0, 0, size * factor, size * factor * 0.31, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = index === 1 ? '#00B8C45A' : '#F2EFE82A'; ctx.lineWidth = 0.8; ctx.stroke();
+        const angle = time * (0.22 + index * 0.06) + index * 2.05;
+        const px = Math.cos(angle) * size * factor;
+        const py = Math.sin(angle) * size * factor * 0.31;
+        ctx.beginPath(); ctx.arc(px, py, 2.4 + index * 0.8, 0, Math.PI * 2);
+        ctx.fillStyle = index === 1 ? colors.ice : colors.amber; ctx.fill();
+        ctx.restore();
+      });
+      planet(x, y, size * 0.2, time);
+    };
+
+    const constellation = (time) => {
+      const pts = [[.70,.28],[.82,.22],[.88,.38],[.76,.47],[.63,.42],[.68,.62],[.84,.68],[.92,.56],[.56,.27]];
+      const links = [[0,1],[1,2],[2,3],[3,4],[4,0],[4,5],[5,6],[6,7],[7,3],[0,8],[8,4]];
+      ctx.lineWidth = 0.8;
+      links.forEach(([a,b], index) => {
+        ctx.beginPath(); ctx.moveTo(pts[a][0]*width,pts[a][1]*height); ctx.lineTo(pts[b][0]*width,pts[b][1]*height);
+        ctx.strokeStyle = index % 4 === 0 ? '#00B8C45B' : '#FF9F1C40'; ctx.stroke();
+      });
+      pts.forEach((point, index) => {
+        const x = point[0] * width, y = point[1] * height;
+        ctx.beginPath(); ctx.arc(x,y,index%3===0?3:1.7,0,Math.PI*2);
+        ctx.fillStyle = index % 3 === 0 ? colors.ice : colors.white; ctx.fill();
+        if (index % 3 === 0) { ctx.beginPath(); ctx.arc(x,y,5 + Math.sin(time*2+index)*1.5,0,Math.PI*2); ctx.strokeStyle='#00B8C44A'; ctx.stroke(); }
+      });
+    };
+
+    const contactHorizon = (time) => {
+      const y = height * 0.78;
+      const radius = width * 0.73;
+      const x = width * 0.73;
+      const surface = ctx.createRadialGradient(x, y - radius * .1, radius * .25, x, y, radius * 1.12);
+      surface.addColorStop(0, '#18222A'); surface.addColorStop(.78, '#080E14'); surface.addColorStop(1, '#05070B');
+      ctx.fillStyle = surface; ctx.beginPath(); ctx.arc(x,y,radius,Math.PI,Math.PI*2); ctx.lineTo(width,height); ctx.lineTo(0,height); ctx.closePath(); ctx.fill();
+      const horizon = ctx.createLinearGradient(0,y-8,width,y+8);
+      horizon.addColorStop(0, '#00B8C400'); horizon.addColorStop(.35, '#00B8C4B0'); horizon.addColorStop(.68, '#FF9F1CA8'); horizon.addColorStop(1, '#FF9F1C00');
+      ctx.beginPath(); ctx.ellipse(x,y,radius,Math.max(10,height*.035),0,Math.PI,Math.PI*2); ctx.strokeStyle=horizon; ctx.lineWidth=2; ctx.shadowColor=colors.teal; ctx.shadowBlur=18; ctx.stroke(); ctx.shadowBlur=0;
+      for (let band=0;band<3;band++) {
+        ctx.beginPath(); ctx.moveTo(width*.28,y+10+band*8);
+        ctx.bezierCurveTo(width*.48,y-38+Math.sin(time*.35+band)*14,width*.57,y+31,width*.77,y-8+band*5);
+        ctx.strokeStyle=band===1?'#00B8C44A':'#FF9F1C32'; ctx.lineWidth=8-band*2; ctx.stroke();
+      }
+    };
+
+    const paint = now => {
+      if (!width || !height) return;
+      const time = reduced() ? 0 : now * 0.001;
+      ctx.clearRect(0,0,width,height);
+      const starsDrift = reduced() ? 0 : pageScrollPhase * height * .08;
+      stars.forEach(star => {
+        const twinkle = reduced() ? .7 : .3 + .7 * (.5 + .5 * Math.sin(time * (1.1 + star.layer * .5) + star.phase));
+        const parallax = (star.layer + 1) * starsDrift;
+        const x = (star.x * width + pointerX * (star.layer + 1) * 3 + width) % width;
+        const y = (star.y * height + parallax) % height;
+        const radius = star.radius * (star.layer === 2 ? 1.2 : 1);
+        ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2);
+        ctx.fillStyle = star.tint ? `rgba(61,224,232,${.16+twinkle*.24})` : `rgba(242,239,232,${.13+twinkle*.36})`; ctx.fill();
+        if (!reduced() && Math.abs(scrollVelocity) > 2 && star.layer === 2) {
+          ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y+Math.sign(scrollVelocity)*Math.min(18,Math.abs(scrollVelocity)*.7));
+          ctx.strokeStyle=`rgba(255,159,28,${Math.min(.5,Math.abs(scrollVelocity)*.015)})`; ctx.lineWidth=radius; ctx.stroke();
+        }
+      });
+      const index = activeSceneIndex;
+      if (index === 0) {
+        const x=width*.76+pointerX*12, y=height*.49+pointerY*9, radius=Math.min(145,width*.12,height*.22);
+        const corona=ctx.createRadialGradient(x,y,radius*.25,x,y,radius*2.1);
+        corona.addColorStop(0,'#FF9F1C32'); corona.addColorStop(.48,'#FF6B1A14'); corona.addColorStop(1,'#FF9F1C00');
+        ctx.fillStyle=corona; ctx.fillRect(x-radius*2.1,y-radius*2.1,radius*4.2,radius*4.2);
+        for(let ray=0;ray<36;ray++){const angle=ray*Math.PI/18+time*.025;const inner=radius*(1.08+(ray%3)*.025);const outer=radius*(1.2+(ray%5)*.04);ctx.beginPath();ctx.moveTo(x+Math.cos(angle)*inner,y+Math.sin(angle)*inner);ctx.lineTo(x+Math.cos(angle)*outer,y+Math.sin(angle)*outer);ctx.strokeStyle=ray%4===0?'#FFB64B38':'#FF9F1C20';ctx.lineWidth=1;ctx.stroke();}
+        planet(x,y,radius,time);
+        ctx.save();ctx.translate(x,y);ctx.rotate(-.25);ctx.beginPath();ctx.ellipse(0,0,radius*1.75,radius*.42,0,0,Math.PI*2);ctx.strokeStyle='#F2EFE832';ctx.lineWidth=.8;ctx.stroke();ctx.restore();
+      } else if (index === 1 || index === 4) {
+        orbitSystem(width*.75+pointerX*10,height*.48+pointerY*8,Math.min(105,width*.09,height*.16),time);
+      } else if (index === 2) {
+        constellation(time);
+      } else if (index === 3) {
+        planet(width*.83,height*.52,Math.min(100,width*.085,height*.15),time,colors.teal);
+        ctx.save();ctx.translate(width*.83,height*.52);ctx.rotate(.3);ctx.beginPath();ctx.ellipse(0,0,150,40,0,0,Math.PI*2);ctx.strokeStyle='#00B8C43A';ctx.stroke();ctx.restore();
+      } else if (index === 5) contactHorizon(time);
+      scrollVelocity *= reduced() ? 0 : .88;
+    };
+
     const animate = now => {
-      if (!scene.running) return;
-      const targetPhase = pageScrollPhase;
-      scene.phase += (targetPhase - scene.phase) * 0.085;
-      pointer.x += (pointer.targetX - pointer.x) * 0.12;
-      pointer.y += (pointer.targetY - pointer.y) * 0.12;
-      paint(now);
-      if (!reduceMotion.matches) scene.frame = requestAnimationFrame(animate);
+      if (!running || document.hidden) return;
+      if (now - lastPaint > 32) { paint(now); lastPaint = now; }
+      frame = requestAnimationFrame(animate);
     };
     const start = () => {
-      if (scene.running) return;
-      scene.running = true;
-      scene.frame = requestAnimationFrame(animate);
+      if (running || document.hidden) return;
+      running = true;
+      if (reduced()) { paint(performance.now()); return; }
+      frame = requestAnimationFrame(animate);
     };
-    const stop = () => {
-      scene.running = false;
-      cancelAnimationFrame(scene.frame);
-      paint(performance.now());
-    };
-    if ('IntersectionObserver' in window) {
-      const sceneObserver = new IntersectionObserver(entries => entries.forEach(entry => entry.isIntersecting ? start() : stop()), { rootMargin: '120px' });
-      sceneObserver.observe(art);
-    } else start();
-
-    const onPointer = event => {
-      const box = canvas.getBoundingClientRect();
-      pointer.targetX = (event.clientX - box.left) / box.width;
-      pointer.targetY = (event.clientY - box.top) / box.height;
-      pointer.active = true;
-      wake.push({ x: pointer.x, y: pointer.y, time: performance.now() });
-      if (wake.length > 22) wake.shift();
-      if (!scene.running) paint(performance.now());
-    };
-    window.addEventListener('pointermove', onPointer, { passive: true });
-    const resetPointer = () => { pointer.active = false; pointer.targetX = 0.5; pointer.targetY = 0.5; if (!scene.running) paint(performance.now()); };
-    window.addEventListener('blur', resetPointer, { passive: true });
-    document.addEventListener('mouseleave', resetPointer, { passive: true });
-
-    const playNote = index => {
-      if (!soundEnabled || !audio || performance.now() - lastStrike < 95) return;
-      lastStrike = performance.now();
-      const oscillator = audio.createOscillator();
-      const gain = audio.createGain();
-      const frequency = pentatonic[Math.abs(index) % pentatonic.length] * (index % 16 > 7 ? 2 : 1);
-      oscillator.type = 'sine';
-      oscillator.frequency.value = frequency;
-      oscillator.connect(gain);
-      gain.connect(audio.destination);
-      const now = audio.currentTime;
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.11, now + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
-      oscillator.start(now);
-      oscillator.stop(now + 0.44);
-    };
-    window.addEventListener('pointerdown', event => {
-      if (event.target.closest('a,button,input,textarea,select')) return;
-      playNote(scene.selected >= 0 ? scene.selected : 15);
+    const stop = () => { running = false; cancelAnimationFrame(frame); paint(performance.now()); };
+    requestScenePaint = () => { if (reduced() || document.hidden) paint(performance.now()); };
+    window.addEventListener('scroll', () => {
+      const current = window.scrollY;
+      scrollVelocity = Math.max(-30,Math.min(30,current-lastY)); lastY=current;
     }, { passive: true });
-
-    if (soundButton) soundButton.addEventListener('click', async () => {
-      soundEnabled = !soundEnabled;
-      soundButton.setAttribute('aria-pressed', String(soundEnabled));
-      soundButton.textContent = soundEnabled ? 'Sound on' : 'Sound off';
-      if (soundEnabled) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) {
-          audio ||= new AudioContext();
-          if (audio.state === 'suspended') await audio.resume();
-          playNote(7);
-        } else {
-          soundEnabled = false;
-          soundButton.setAttribute('aria-pressed', 'false');
-          soundButton.textContent = 'Audio unavailable';
-        }
-      } else if (audio?.state === 'running') {
-        audio.suspend();
-      }
-    });
-    if (reduceMotion.addEventListener) reduceMotion.addEventListener('change', () => scene.running ? (stop(), start()) : paint(performance.now()));
-    if ('ResizeObserver' in window) new ResizeObserver(resize).observe(canvas); else window.addEventListener('resize', resize, { passive: true });
-    resize();
+    window.addEventListener('pointermove', event => { pointerX=(event.clientX/Math.max(1,width)-.5)*2; pointerY=(event.clientY/Math.max(1,height)-.5)*2; }, { passive: true });
+    document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+    if ('IntersectionObserver' in window) {
+      const sceneObserver = new IntersectionObserver(entries => entries.forEach(entry => entry.isIntersecting ? start() : stop()));
+      sceneObserver.observe(pageField);
+    } else start();
+    if ('ResizeObserver' in window) new ResizeObserver(resize).observe(canvas);
+    else window.addEventListener('resize', resize, { passive: true });
+    if (reduceMotion.addEventListener) reduceMotion.addEventListener('change', () => { if (reduced()) stop(); else { running = false; start(); } });
+    resize(); start();
   }
 }
 
-// Subtle pointer depth on the visuals; touch and reduced-motion users keep the stable layout.
+// Subtle project depth responds only on pointer devices and stops for reduced motion.
 if (!reduceMotion.matches && window.matchMedia('(pointer: fine)').matches) {
   document.querySelectorAll('.project-card').forEach(card => {
     card.addEventListener('pointermove', event => {
       const bounds = card.getBoundingClientRect();
-      const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 5;
-      const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * -5;
-      card.style.setProperty('--tilt-x', `${(x * 1.6).toFixed(1)}px`);
-      card.style.setProperty('--tilt-y', `${(y * 1.6).toFixed(1)}px`);
+      const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 4;
+      const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * -4;
+      card.style.setProperty('--tilt-x', `${x.toFixed(1)}px`);
+      card.style.setProperty('--tilt-y', `${y.toFixed(1)}px`);
     }, { passive: true });
     card.addEventListener('pointerleave', () => {
       card.style.setProperty('--tilt-x', '0');
       card.style.setProperty('--tilt-y', '0');
-    }, { passive: true });
+    });
   });
 }

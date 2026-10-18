@@ -16,10 +16,10 @@ Building intelligent AI systems, agentic workflows, and production-ready machine
 I build AI and machine-learning applications, with a focus on generative AI, agent workflows, and retrieval-augmented systems. My projects include a LangGraph resume-analysis system, clinical decision-support research, finance text-to-SQL, and computer-vision applications. I recently worked on agentic AI features for a multi-tenant voice platform, including real-time usage billing, MCP integrations, and RAG retrieval. I hold an MSc in Computer Science with a specialization in Data Analytics from Digital University Kerala.
 
 ## Skills
-- Languages: Python, SQL, JavaScript, C
+- Languages: Python, SQL
 - AI / ML: Machine learning and deep learning, generative AI and large language models, retrieval-augmented generation (RAG), agentic AI and multi-agent systems, LangChain, LangGraph, model fine-tuning and QLoRA, prompt engineering and LLM evaluation, natural language processing, computer vision, PyTorch, scikit-learn, XGBoost, LightGBM, Hugging Face, Pandas, NumPy, SHAP, YOLOv8, OpenCV, FAISS, Qdrant, Sentence Transformers
-- Web: FastAPI, REST API development, backend development, WebSocket-based streaming, Flask, HTML/CSS, JavaScript fundamentals
-- Tools: Git, GitHub, Docker, AWS ECS, AWS ECR, AWS Secrets Manager, GitHub Actions, MLflow, Prometheus, Grafana, Linux, VS Code, Jupyter Notebook, PostgreSQL, MySQL
+- Web: FastAPI, REST API development, backend development, WebSocket-based streaming, Flask, HTML/CSS
+- Tools: Git, GitHub, Docker, AWS ECS, AWS ECR, AWS Secrets Manager, GitHub Actions, MLflow, VS Code, Jupyter Notebook, PostgreSQL, MySQL
 
 ## Projects
 ### Agentic Resume Intelligence System
