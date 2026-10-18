@@ -4,18 +4,18 @@ const year = document.getElementById('year');
 if (year) year.textContent = new Date().getFullYear();
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-const hero = document.querySelector('.hero');
 const header = document.querySelector('.top');
 const progress = document.querySelector('.page-progress span');
 const scrollDriftItems = [...document.querySelectorAll('.project-visual, .contact-art, .language-orbit')];
 let scrollFrame = 0;
+let pageScrollPhase = 0;
 const updateScrollChrome = () => {
   if (scrollFrame) return;
   scrollFrame = requestAnimationFrame(() => {
     const max = document.documentElement.scrollHeight - window.innerHeight;
-    if (progress) progress.style.transform = `scaleX(${max > 0 ? window.scrollY / max : 0})`;
+    pageScrollPhase = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+    if (progress) progress.style.transform = `scaleX(${pageScrollPhase})`;
     if (header) header.classList.toggle('is-scrolled', window.scrollY > 28);
-    if (hero) hero.style.setProperty('--scroll-phase', String(Math.min(1, Math.max(0, window.scrollY / Math.max(1, hero.offsetHeight)))));
     if (!reduceMotion.matches) {
       const viewportMid = window.innerHeight * 0.5;
       scrollDriftItems.forEach(item => {
@@ -87,7 +87,7 @@ const soundButton = document.getElementById('sound-toggle');
 if (canvas && canvas.getContext) {
   const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
   if (ctx) {
-    const art = canvas.closest('.hero-art');
+    const art = canvas.closest('.page-field');
     const pointer = { x: 0.5, y: 0.5, targetX: 0.5, targetY: 0.5, active: false };
     const scene = { width: 0, height: 0, phase: 0, rotation: 0, running: false, frame: 0, selected: -1 };
     const wake = [];
@@ -263,7 +263,7 @@ if (canvas && canvas.getContext) {
 
     const animate = now => {
       if (!scene.running) return;
-      const targetPhase = Math.min(1, Math.max(0, Number(hero?.style.getPropertyValue('--scroll-phase')) || 0));
+      const targetPhase = pageScrollPhase;
       scene.phase += (targetPhase - scene.phase) * 0.085;
       pointer.x += (pointer.targetX - pointer.x) * 0.12;
       pointer.y += (pointer.targetY - pointer.y) * 0.12;
@@ -294,8 +294,10 @@ if (canvas && canvas.getContext) {
       if (wake.length > 22) wake.shift();
       if (!scene.running) paint(performance.now());
     };
-    canvas.addEventListener('pointermove', onPointer, { passive: true });
-    canvas.addEventListener('pointerleave', () => { pointer.active = false; pointer.targetX = 0.5; pointer.targetY = 0.5; if (!scene.running) paint(performance.now()); }, { passive: true });
+    window.addEventListener('pointermove', onPointer, { passive: true });
+    const resetPointer = () => { pointer.active = false; pointer.targetX = 0.5; pointer.targetY = 0.5; if (!scene.running) paint(performance.now()); };
+    window.addEventListener('blur', resetPointer, { passive: true });
+    document.addEventListener('mouseleave', resetPointer, { passive: true });
 
     const playNote = index => {
       if (!soundEnabled || !audio || performance.now() - lastStrike < 95) return;
@@ -314,7 +316,10 @@ if (canvas && canvas.getContext) {
       oscillator.start(now);
       oscillator.stop(now + 0.44);
     };
-    canvas.addEventListener('pointerdown', () => playNote(scene.selected >= 0 ? scene.selected : 15));
+    window.addEventListener('pointerdown', event => {
+      if (event.target.closest('a,button,input,textarea,select')) return;
+      playNote(scene.selected >= 0 ? scene.selected : 15);
+    }, { passive: true });
 
     if (soundButton) soundButton.addEventListener('click', async () => {
       soundEnabled = !soundEnabled;
