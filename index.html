@@ -6,22 +6,20 @@
   <title>Fadhil Muhammed N C - AI/ML Engineer | Generative AI Engineer</title>
   <meta name="description" content="Fadhil Muhammed N C builds AI systems, agentic workflows, and production-ready machine learning applications.">
   <meta name="theme-color" content="#050507">
-  <link rel="canonical" href="https://PLACEHOLDER.vercel.app/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Fadhil Muhammed N C - AI/ML Engineer">
   <meta property="og:description" content="Building intelligent AI systems, agentic workflows, and production-ready machine learning applications.">
-  <meta property="og:url" content="https://PLACEHOLDER.vercel.app/">
-  <meta property="og:image" content="https://PLACEHOLDER.vercel.app/assets/og.jpg">
+  <meta property="og:image" content="/assets/og.jpg">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Fadhil Muhammed N C - AI/ML Engineer">
   <meta name="twitter:description" content="Building intelligent AI systems, agentic workflows, and production-ready machine learning applications.">
-  <meta name="twitter:image" content="https://PLACEHOLDER.vercel.app/assets/og.jpg">
+  <meta name="twitter:image" content="/assets/og.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600&display=swap">
   <link rel="stylesheet" href="styles.css">
   <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"Person","name":"Fadhil Muhammed N C","jobTitle":"AI/ML Engineer | Generative AI Engineer","email":"ncfadhil@gmail.com","url":"https://PLACEHOLDER.vercel.app/","sameAs":["https://github.com/fadnc","https://linkedin.com/in/fadhilmuhd"]}
+    {"@context":"https://schema.org","@type":"Person","name":"Fadhil Muhammed N C","jobTitle":"AI/ML Engineer | Generative AI Engineer","email":"ncfadhil@gmail.com","sameAs":["https://github.com/fadnc","https://linkedin.com/in/fadhilmuhd"]}
   </script>
 </head>
 <body>
@@ -38,7 +36,7 @@
   </header>
 
   <main id="main">
-    <section class="hero" id="top" aria-labelledby="hero-title">
+    <section class="hero" id="top" aria-labelledby="hero-title" data-reveal>
       <h1 id="hero-title">Fadhil Muhammed N C</h1>
       <p class="role">AI/ML Engineer | Generative AI Engineer</p>
       <p class="lead">Building intelligent AI systems, agentic workflows, and production-ready machine learning applications.</p>
@@ -49,12 +47,12 @@
       </p>
     </section>
 
-    <section id="about" aria-labelledby="about-title">
+    <section id="about" aria-labelledby="about-title" data-reveal>
       <h2 id="about-title">About</h2>
       <p>I build AI and machine-learning applications, with a focus on generative AI, agent workflows, and retrieval-augmented systems. My projects include a LangGraph resume-analysis system, clinical decision-support research, finance text-to-SQL, and computer-vision applications. I recently worked on agentic AI features for a multi-tenant voice platform, including real-time usage billing, MCP integrations, and RAG retrieval. I hold an MSc in Computer Science with a specialization in Data Analytics from Digital University Kerala.</p>
     </section>
 
-    <section id="skills" aria-labelledby="skills-title">
+    <section id="skills" aria-labelledby="skills-title" data-reveal>
       <h2 id="skills-title">Skills</h2>
       <dl class="skills">
         <dt>Languages</dt><dd>Python, SQL, JavaScript, C</dd>
@@ -64,33 +62,39 @@
       </dl>
     </section>
 
-    <section id="projects" aria-labelledby="projects-title">
+    <section id="projects" aria-labelledby="projects-title" data-reveal>
       <h2 id="projects-title">Projects</h2>
+      <div class="project-filters" role="group" aria-label="Filter projects">
+        <button type="button" class="filter-button is-active" data-filter="all" aria-pressed="true">All projects</button>
+        <button type="button" class="filter-button" data-filter="genai" aria-pressed="false">Generative AI</button>
+        <button type="button" class="filter-button" data-filter="ml" aria-pressed="false">Machine learning</button>
+        <button type="button" class="filter-button" data-filter="vision" aria-pressed="false">Computer vision</button>
+      </div>
       <ul class="rows">
-        <li>
+        <li class="project-row" data-category="genai" data-reveal>
           <div><h3>Agentic Resume Intelligence System</h3><p>Analyzes resumes against job descriptions, identifies skill gaps, and generates targeted suggestions with retrieval and conditional agent routing.</p><p class="meta">Python, LangGraph, FastAPI, FAISS, Sentence Transformers, Groq API, Docker, AWS, GitHub Actions, MLflow, Grafana</p></div>
-          <a href="https://github.com/fadnc/intelligent-resume-job-matching-assistant-llm-rag-sagemaker">View code</a>
+          <a href="https://github.com/fadnc/Agentic-Resume-Intelligence-System">View code</a>
         </li>
-        <li>
+        <li class="project-row" data-category="ml" data-reveal>
           <div><h3>Smart ICU Assistant</h3><p>Clinical decision-support research using machine learning and deep learning to predict ICU outcomes, explain models, and generate rule-based alerts.</p><p class="meta">Python, PyTorch, LSTM, Transformer, XGBoost, LightGBM, FastAPI, SHAP</p></div>
           <a href="https://github.com/fadnc/Smart-ICU-Assistant">View code</a>
         </li>
-        <li>
+        <li class="project-row" data-category="genai" data-reveal>
           <div><h3>Finance Text-to-SQL Assistant</h3><p>A finance-domain natural-language-to-SQL prototype using QLoRA fine-tuning of TinyLlama and execution-based evaluation.</p><p class="meta">Python, TinyLlama, Hugging Face, QLoRA, 4-bit quantization, SQL</p></div>
           <a href="https://github.com/fadnc/Finance-Text-to-SQL">View code</a>
         </li>
-        <li>
+        <li class="project-row" data-category="vision" data-reveal>
           <div><h3>Aerial Object Detection System</h3><p>Detects aerial objects across 10 classes using a unified VisDrone and UAVDT dataset, YOLOv8 fine-tuning, and ONNX inference optimization.</p><p class="meta">Python, PyTorch, YOLOv8, ONNX, computer vision</p></div>
           <a href="https://github.com/fadnc/Aerial-Object-Detection-System-YOLOv8-OpenCV-ONNX-">View code</a>
         </li>
-        <li>
+        <li class="project-row" data-category="vision" data-reveal>
           <div><h3>Audio-Visual Emotion Recognition</h3><p>An experimental deep-learning system that predicts emotion from speech and facial expressions, with a local app for video uploads and live camera capture.</p><p class="meta">Python, PyTorch, CNN, ResNet-18, MediaPipe, OpenCV, FastAPI, scikit-learn</p></div>
           <a href="https://github.com/fadnc/Audio-Visual-Emotion-Recognition">View code</a>
         </li>
       </ul>
     </section>
 
-    <section id="experience" aria-labelledby="experience-title">
+    <section id="experience" aria-labelledby="experience-title" data-reveal>
       <h2 id="experience-title">Experience</h2>
       <ul class="rows">
         <li>
@@ -111,7 +115,7 @@
       </ul>
     </section>
 
-    <section id="contact" aria-labelledby="contact-title">
+    <section id="contact" aria-labelledby="contact-title" data-reveal>
       <h2 id="contact-title">Contact</h2>
       <p>Contact me about AI/ML engineering, generative AI, or agentic systems.</p>
       <a class="mail" href="mailto:ncfadhil@gmail.com">ncfadhil@gmail.com</a>
