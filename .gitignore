@@ -1,5 +1,7 @@
 node_modules/
 .vercel/
+anims/
+/FADHIL MUHAMMED N C.pdf
 .env
 .env.*
 !.env.example
