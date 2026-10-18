@@ -7,6 +7,7 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const hero = document.querySelector('.hero');
 const header = document.querySelector('.top');
 const progress = document.querySelector('.page-progress span');
+const scrollDriftItems = [...document.querySelectorAll('.project-visual, .contact-art, .language-orbit')];
 let scrollFrame = 0;
 const updateScrollChrome = () => {
   if (scrollFrame) return;
@@ -15,6 +16,14 @@ const updateScrollChrome = () => {
     if (progress) progress.style.transform = `scaleX(${max > 0 ? window.scrollY / max : 0})`;
     if (header) header.classList.toggle('is-scrolled', window.scrollY > 28);
     if (hero) hero.style.setProperty('--scroll-phase', String(Math.min(1, Math.max(0, window.scrollY / Math.max(1, hero.offsetHeight)))));
+    if (!reduceMotion.matches) {
+      const viewportMid = window.innerHeight * 0.5;
+      scrollDriftItems.forEach(item => {
+        const box = item.getBoundingClientRect();
+        const offset = (box.top + box.height * 0.5 - viewportMid) * -0.035;
+        item.style.setProperty('--scroll-shift', `${Math.max(-18, Math.min(18, offset)).toFixed(1)}px`);
+      });
+    }
     scrollFrame = 0;
   });
 };
