@@ -7,7 +7,7 @@
 - Email: ncfadhil@gmail.com
 - GitHub: https://github.com/fadnc
 - LinkedIn: https://linkedin.com/in/fadhilmuhd
-- Resume file: assets/resume.pdf
+- Resume file: assets/Fadhil-Muhammed-NC-Resume.pdf
 
 ## Hero line
 Building intelligent AI systems, agentic workflows, and production-ready machine learning applications.
