@@ -91,17 +91,20 @@ if ('IntersectionObserver' in window) {
 const canvas = document.getElementById('helix');
 const soundButton = document.getElementById('sound-toggle');
 if (canvas && canvas.getContext) {
-  const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+  // Keep the canvas on the normal compositing path. Desynchronized canvas
+  // updates can flash as opaque rectangles while this fixed scene moves on scroll.
+  const ctx = canvas.getContext('2d', { alpha: true });
   if (ctx) {
     const art = canvas.closest('.page-field');
     const pointer = { x: 0.5, y: 0.5, targetX: 0.5, targetY: 0.5, active: false };
     const scene = { width: 0, height: 0, phase: 0, rotation: 0, running: false, frame: 0, selected: -1 };
     const wake = [];
     const bars = Array.from({ length: 32 }, (_, i) => ({ index: i, angle: i * 0.67, y: (i - 15.5) * 0.115 }));
-    const dust = Array.from({ length: 92 }, (_, i) => ({
+    const dust = Array.from({ length: 146 }, (_, i) => ({
       x: ((i * 73.17) % 997) / 997,
       y: ((i * 151.71 + 13) % 991) / 991,
-      size: 0.45 + ((i * 19) % 13) / 10,
+      size: 0.4 + ((i * 19) % 14) / 10,
+      star: i % 19 === 0,
       phase: i * 2.31
     }));
     let audio = null;
@@ -132,6 +135,10 @@ if (canvas && canvas.getContext) {
     const paint = now => {
       const { width, height } = scene;
       if (!width || !height) return;
+      // Always clear in the default compositing state so the full-screen
+      // canvas stays transparent while its scene shifts with page scroll.
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
       ctx.clearRect(0, 0, width, height);
       const phase = scene.phase;
       const pointerX = pointer.active ? (pointer.x - 0.5) : 0;
@@ -154,13 +161,26 @@ if (canvas && canvas.getContext) {
       ctx.fillRect(0, 0, width, height);
 
       dust.forEach(point => {
-        const pulse = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 2 + point.phase));
+        const pulse = 0.28 + 0.72 * (0.5 + 0.5 * Math.sin(t * 2 + point.phase));
         const dx = (point.x - 0.5) * width;
         const dy = (point.y - 0.5) * height;
+        const x = width * 0.51 + dx;
+        const y = height * 0.5 + dy;
         ctx.beginPath();
-        ctx.fillStyle = `rgba(196,199,208,${0.11 * pulse})`;
-        ctx.arc(width * 0.51 + dx, height * 0.5 + dy, point.size * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(202,205,214,${(point.star ? 0.34 : 0.16) * pulse})`;
+        ctx.arc(x, y, point.size * pulse * (point.star ? 1.12 : 1), 0, Math.PI * 2);
         ctx.fill();
+        if (point.star) {
+          const ray = point.size * (1.8 + pulse);
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(202,205,214,${0.14 * pulse})`;
+          ctx.lineWidth = 0.55;
+          ctx.moveTo(x - ray, y);
+          ctx.lineTo(x + ray, y);
+          ctx.moveTo(x, y - ray);
+          ctx.lineTo(x, y + ray);
+          ctx.stroke();
+        }
       });
 
       while (wake.length && now - wake[0].time > 620) wake.shift();
@@ -214,44 +234,51 @@ if (canvas && canvas.getContext) {
 
       let closest = null;
       if (pointer.active) closest = objects.reduce((best, item) => item.distance < best.distance ? item : best, objects[0]);
-      scene.selected = closest && closest.distance < 38 ? closest.bar.index : -1;
+      scene.selected = closest && closest.distance < 48 ? closest.bar.index : -1;
       objects.forEach(item => {
         const active = item.bar.index === scene.selected;
+        const hoverScale = active ? 1.105 + Math.sin(now * 0.006) * 0.025 : 1;
+        const displayVertices = item.vertices.map(point => ({
+          x: item.center.x + (point.x - item.center.x) * hoverScale,
+          y: item.center.y + (point.y - item.center.y) * hoverScale - (active ? 2 : 0)
+        }));
         if (active) {
           ctx.save();
-          ctx.shadowColor = 'rgba(168,185,255,0.9)';
-          ctx.shadowBlur = 23;
+          ctx.shadowColor = 'rgba(168,185,255,1)';
+          ctx.shadowBlur = 46;
           ctx.beginPath();
-          ctx.ellipse(item.center.x, item.center.y, 33 * item.center.perspective, 8 * item.center.perspective, -0.12, 0, Math.PI * 2);
-          ctx.strokeStyle = 'rgba(178,194,255,0.48)';
-          ctx.lineWidth = 1;
+          ctx.ellipse(item.center.x, item.center.y - 2, 43 * item.center.perspective, 13 * item.center.perspective, -0.12, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(143,168,255,0.32)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(211,222,255,0.92)';
+          ctx.lineWidth = 1.7;
           ctx.stroke();
           ctx.restore();
         }
         item.faces.sort((a, b) => a.z - b.z).forEach(face => {
-          const rgb = active ? '191,204,255' : (item.bar.index % 4 === 0 ? '151,170,255' : '137,151,220');
+          const rgb = active ? '205,218,255' : (item.bar.index % 4 === 0 ? '151,170,255' : '137,151,220');
           ctx.beginPath();
           face.ids.forEach((id, index) => {
-            const point = item.vertices[id];
+            const point = displayVertices[id];
             if (index === 0) ctx.moveTo(point.x, point.y); else ctx.lineTo(point.x, point.y);
           });
           ctx.closePath();
-          ctx.fillStyle = `rgba(${rgb},${Math.min(0.66, face.tone * (active ? 0.47 : 0.33) + 0.035)})`;
+          ctx.fillStyle = `rgba(${rgb},${Math.min(0.94, face.tone * (active ? 0.8 : 0.33) + (active ? 0.12 : 0.035))})`;
           ctx.fill();
-          ctx.strokeStyle = `rgba(209,218,255,${face.edge * (active ? 1.8 : 1)})`;
-          ctx.lineWidth = active ? 1.1 : 0.7;
-          if (active) { ctx.shadowColor = '#91a9ff'; ctx.shadowBlur = 12; }
+          ctx.strokeStyle = `rgba(220,229,255,${face.edge * (active ? 2.8 : 1)})`;
+          ctx.lineWidth = active ? 1.7 : 0.7;
+          if (active) { ctx.shadowColor = '#91a9ff'; ctx.shadowBlur = 25; }
           ctx.stroke();
           ctx.shadowBlur = 0;
           const topFace = face.ids.includes(7) && face.ids.includes(5);
           if (topFace) {
-            const g = ctx.createLinearGradient(item.vertices[1].x, item.vertices[1].y, item.vertices[7].x, item.vertices[7].y);
+            const g = ctx.createLinearGradient(displayVertices[1].x, displayVertices[1].y, displayVertices[7].x, displayVertices[7].y);
             g.addColorStop(0, 'rgba(255,255,255,0.28)');
             g.addColorStop(0.55, 'rgba(190,204,255,0.04)');
             g.addColorStop(1, 'rgba(255,255,255,0.16)');
             ctx.beginPath();
-            ctx.moveTo(item.vertices[1].x, item.vertices[1].y);
-            ctx.lineTo(item.vertices[5].x, item.vertices[5].y);
+            ctx.moveTo(displayVertices[1].x, displayVertices[1].y);
+            ctx.lineTo(displayVertices[5].x, displayVertices[5].y);
             ctx.strokeStyle = g;
             ctx.lineWidth = 1.3;
             ctx.stroke();
@@ -268,14 +295,42 @@ if (canvas && canvas.getContext) {
       ctx.ellipse(centerX, centerY, scale * 1.45, scale * 0.41, -0.16 + turnY * 0.1, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
+
+      if (pointer.active && scene.selected >= 0) {
+        const cursorX = pointer.x * width;
+        const cursorY = pointer.y * height;
+        const labelX = Math.min(width - 92, Math.max(8, cursorX + 16));
+        const labelY = Math.min(height - 10, Math.max(14, cursorY - 12));
+        ctx.save();
+        ctx.strokeStyle = 'rgba(207,220,255,0.88)';
+        ctx.fillStyle = 'rgba(218,227,255,0.96)';
+        ctx.lineWidth = 1;
+        ctx.shadowColor = '#91a9ff';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(cursorX, cursorY, 5, 0, Math.PI * 2);
+        ctx.moveTo(cursorX - 10, cursorY);
+        ctx.lineTo(cursorX - 6, cursorY);
+        ctx.moveTo(cursorX + 6, cursorY);
+        ctx.lineTo(cursorX + 10, cursorY);
+        ctx.moveTo(cursorX, cursorY - 10);
+        ctx.lineTo(cursorX, cursorY - 6);
+        ctx.moveTo(cursorX, cursorY + 6);
+        ctx.lineTo(cursorX, cursorY + 10);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.font = '9px ui-monospace, SFMono-Regular, Consolas, monospace';
+        ctx.fillText(`X ${Math.round(cursorX)}  Y ${Math.round(cursorY)}`, labelX, labelY);
+        ctx.restore();
+      }
     };
 
     const animate = now => {
       if (!scene.running) return;
       const targetPhase = pageScrollPhase;
       scene.phase += (targetPhase - scene.phase) * 0.085;
-      pointer.x += (pointer.targetX - pointer.x) * 0.12;
-      pointer.y += (pointer.targetY - pointer.y) * 0.12;
+      pointer.x += (pointer.targetX - pointer.x) * 0.19;
+      pointer.y += (pointer.targetY - pointer.y) * 0.19;
       paint(now);
       if (!reduceMotion.matches) scene.frame = requestAnimationFrame(animate);
     };
